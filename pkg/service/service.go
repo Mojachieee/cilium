@@ -4,6 +4,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -56,8 +57,8 @@ func (e ErrLocalRedirectServiceExists) Error() string {
 }
 
 func (e *ErrLocalRedirectServiceExists) Is(target error) bool {
-	t, ok := target.(*ErrLocalRedirectServiceExists)
-	if !ok {
+	t := &ErrLocalRedirectServiceExists{}
+	if !errors.As(target, &t) {
 		return false
 	}
 	return e.frontend.DeepEqual(&t.frontend) && e.name == t.name
@@ -298,7 +299,7 @@ func (s *Service) RegisterL7LBService(serviceName, resourceName lb.ServiceName, 
 		// datapath and Envoy endpoint resources are created for
 		// registered services.
 		if _, _, err := s.UpsertService(svc); err != nil {
-			return fmt.Errorf("error while updating service in LB map: %s", err)
+			return fmt.Errorf("error while updating service in LB map: %w", err)
 		}
 	}
 	return nil
@@ -354,7 +355,7 @@ func (s *Service) RemoveL7LBService(serviceName, resourceName lb.ServiceName) er
 	svcs := s.GetDeepCopyServicesByName(serviceName.Name, serviceName.Namespace)
 	for _, svc := range svcs {
 		if _, _, err := s.UpsertService(svc); err != nil {
-			return fmt.Errorf("Error while removing service from LB map: %s", err)
+			return fmt.Errorf("Error while removing service from LB map: %w", err)
 		}
 	}
 	return nil
@@ -1094,7 +1095,7 @@ func (s *Service) SyncWithK8sFinished(ensurer func(k8s.ServiceID, *lock.Stoppabl
 				Warn("Deleting no longer present service")
 
 			if err := s.deleteServiceLocked(svc); err != nil {
-				return fmt.Errorf("Unable to remove service %+v: %s", svc, err)
+				return fmt.Errorf("Unable to remove service %+v: %w", svc, err)
 			}
 		} else if svc.restoredBackendHashes.Len() > 0 {
 			// The service is still associated with stale backends
@@ -1139,7 +1140,7 @@ func (s *Service) createSVCInfoIfNotExist(p *lb.SVC) (*svcInfo, bool, bool,
 		addrID, err := AcquireID(p.Frontend.L3n4Addr, uint32(p.Frontend.ID))
 		if err != nil {
 			return nil, false, false, nil,
-				fmt.Errorf("Unable to allocate service ID %d for %v: %s",
+				fmt.Errorf("Unable to allocate service ID %d for %v: %w",
 					p.Frontend.ID, p.Frontend, err)
 		}
 		p.Frontend.ID = addrID.ID
@@ -1390,7 +1391,7 @@ func (s *Service) restoreBackendsLocked(svcBackendsById map[lb.BackendID]struct{
 	failed, restored, skipped := 0, 0, 0
 	backends, err := s.lbmap.DumpBackendMaps()
 	if err != nil {
-		return fmt.Errorf("Unable to dump backend maps: %s", err)
+		return fmt.Errorf("Unable to dump backend maps: %w", err)
 	}
 
 	svcBackendsCount := len(svcBackendsById)
@@ -1636,7 +1637,7 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
 		s.lbmap.DeleteBackendByID(id)
 	}
 	if err := DeleteID(uint32(svc.frontend.ID)); err != nil {
-		return fmt.Errorf("Unable to release service ID %d: %s", svc.frontend.ID, err)
+		return fmt.Errorf("Unable to release service ID %d: %w", svc.frontend.ID, err)
 	}
 
 	if option.Config.EnableHealthCheckNodePort {
@@ -1665,7 +1666,7 @@ func (s *Service) updateBackendsCacheLocked(svc *svcInfo, backends []*lb.Backend
 			if s.backendRefCount.Add(hash) {
 				id, err := AcquireBackendID(backend.L3n4Addr)
 				if err != nil {
-					return nil, nil, nil, fmt.Errorf("Unable to acquire backend ID for %q: %s",
+					return nil, nil, nil, fmt.Errorf("Unable to acquire backend ID for %q: %w",
 						backend.L3n4Addr, err)
 				}
 				backends[i].ID = id
