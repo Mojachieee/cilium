@@ -323,18 +323,17 @@ generate-hubble-api: api/v1/flow/flow.proto api/v1/peer/peer.proto api/v1/observ
 
 define generate_k8s_api
 	$(QUIET) cd "./vendor/k8s.io/code-generator" && \
-	bash ./generate-internal-groups.sh $(1) \
+	bash ./kube_codegen.sh $(1) \
 	    $(2) \
 	    "" \
 	    $(3) \
 	    $(4) \
 	    --go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
-	    --output-base $(5)
+	    --output-dir $(5)
 endef
 
 define generate_deepequal
 	$(GO) run github.com/cilium/deepequal-gen \
-	--input-dirs $(subst $(space),$(comma),$(1)) \
 	--go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
 	--output-file-base zz_generated.deepequal \
 	--output-base $(2)
@@ -342,10 +341,8 @@ endef
 
 define generate_deepcopy
 	$(GO) run k8s.io/code-generator/cmd/deepcopy-gen \
-	--input-dirs $(subst $(space),$(comma),$(1)) \
 	--go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
-	--output-file-base zz_generated.deepcopy \
-	--output-base $(2)
+	--output-file zz_generated.deepcopy
 endef
 
 define generate_k8s_protobuf
@@ -364,7 +361,7 @@ define generate_k8s_protobuf
 		--proto-import="$(PWD)/tools/protobuf" \
 		--packages=$(subst $(newline),$(comma),$(1)) \
 		--go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
-		--output-base=$(2)
+		--output-dir=$(2)
 endef
 
 define K8S_PROTO_PACKAGES
@@ -384,6 +381,8 @@ generate-k8s-api: ## Generate Cilium k8s API client, deepcopy and deepequal Go s
 	$(ASSERT_CILIUM_MODULE)
 
 	$(eval TMPDIR := $(shell mktemp -d -t cilium.tmpXXXXXXXX))
+	mkdir -p "$(TMPDIR)/github.com/cilium/cilium"
+	$(QUIET) cp -a -r $(shell ls . | grep -v vendor) "$(TMPDIR)/github.com/cilium/cilium/."
 
 	$(QUIET) $(call generate_k8s_protobuf,${K8S_PROTO_PACKAGES},"$(TMPDIR)")
 
@@ -397,7 +396,7 @@ generate-k8s-api: ## Generate Cilium k8s API client, deepcopy and deepequal Go s
 	$(QUIET) $(call generate_k8s_api,client,github.com/cilium/cilium/pkg/k8s/slim/k8s/apiextensions-client,github.com/cilium/cilium/pkg/k8s/slim/k8s/apis,"apiextensions:v1","$(TMPDIR)")
 	$(QUIET) $(call generate_k8s_api,client$(comma)lister$(comma)informer,github.com/cilium/cilium/pkg/k8s/client,github.com/cilium/cilium/pkg/k8s/apis,$(GEN_CRD_GROUPS),"$(TMPDIR)")
 
-	$(QUIET) cp -r "$(TMPDIR)/github.com/cilium/cilium/." ./
+	$(QUIET) cp -a -r "$(TMPDIR)/github.com/cilium/cilium/." ./
 	$(QUIET) rm -rf "$(TMPDIR)"
 
 check-k8s-clusterrole: ## Ensures there is no diff between preflight's clusterrole and runtime's clusterrole.
