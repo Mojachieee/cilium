@@ -204,6 +204,7 @@ message Endpoints {
   // NotReadyAddresses in the same subset.
   // Sets of addresses and ports that comprise a service.
   // +optional
+  // +listType=atomic
   repeated EndpointSubset subsets = 2;
 }
 

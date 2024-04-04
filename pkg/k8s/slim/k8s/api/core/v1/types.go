@@ -946,6 +946,7 @@ type Endpoints struct {
 	// NotReadyAddresses in the same subset.
 	// Sets of addresses and ports that comprise a service.
 	// +optional
+	// +listType=atomic
 	Subsets []EndpointSubset `json:"subsets,omitempty" protobuf:"bytes,2,rep,name=subsets"`
 }
 

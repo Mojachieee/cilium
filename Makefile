@@ -321,29 +321,15 @@ generate-operator-api: api/v1/operator/openapi.yaml ## Generate cilium-operator 
 generate-hubble-api: api/v1/flow/flow.proto api/v1/peer/peer.proto api/v1/observer/observer.proto api/v1/relay/relay.proto ## Generate hubble proto Go sources.
 	$(QUIET) $(MAKE) $(SUBMAKEOPTS) -C api/v1
 
-define generate_k8s_api
-	$(QUIET) cd "./vendor/k8s.io/code-generator" && \
-	bash ./kube_codegen.sh $(1) \
-	    $(2) \
-	    "" \
-	    $(3) \
-	    $(4) \
-	    --go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
-	    --output-dir $(5)
-endef
-
 define generate_deepequal
 	$(GO) run github.com/cilium/deepequal-gen \
+	--input-dirs $(subst $(space),$(comma),$(1)) \
 	--go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
 	--output-file-base zz_generated.deepequal \
 	--output-base $(2)
 endef
 
-define generate_deepcopy
-	$(GO) run k8s.io/code-generator/cmd/deepcopy-gen \
-	--go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
-	--output-file zz_generated.deepcopy
-endef
+PROTOBUF_OUTPUT_DIR := $(subst github.com/cilium/cilium,,$(PWD))
 
 define generate_k8s_protobuf
 	$(GO) install k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo && \
@@ -361,7 +347,7 @@ define generate_k8s_protobuf
 		--proto-import="$(PWD)/tools/protobuf" \
 		--packages=$(subst $(newline),$(comma),$(1)) \
 		--go-header-file "$(PWD)/hack/custom-boilerplate.go.txt" \
-		--output-dir=$(2)
+		--output-dir="$(PROTOBUF_OUTPUT_DIR)"
 endef
 
 define K8S_PROTO_PACKAGES
@@ -375,28 +361,18 @@ github.com/cilium/cilium/pkg/k8s/slim/k8s/apis/meta/v1beta1
 github.com/cilium/cilium/pkg/k8s/slim/k8s/apis/util/intstr
 endef
 
-GEN_CRD_GROUPS := "cilium.io:v2\
-                   cilium.io:v2alpha1"
 generate-k8s-api: ## Generate Cilium k8s API client, deepcopy and deepequal Go sources.
 	$(ASSERT_CILIUM_MODULE)
 
 	$(eval TMPDIR := $(shell mktemp -d -t cilium.tmpXXXXXXXX))
-	mkdir -p "$(TMPDIR)/github.com/cilium/cilium"
-	$(QUIET) cp -a -r $(shell ls . | grep -v vendor) "$(TMPDIR)/github.com/cilium/cilium/."
 
 	$(QUIET) $(call generate_k8s_protobuf,${K8S_PROTO_PACKAGES},"$(TMPDIR)")
 
 	$(eval DEEPEQUAL_PACKAGES := $(shell grep "\+deepequal-gen" -l -r --include \*.go --exclude-dir 'vendor' . | xargs dirname {} | sort | uniq | grep -x -v '.' | sed 's|\.\/|github.com/cilium/cilium\/|g'))
 	$(QUIET) $(call generate_deepequal,${DEEPEQUAL_PACKAGES},"$(TMPDIR)")
 
-	$(eval DEEPCOPY_PACKAGES := $(shell grep "\+k8s:deepcopy-gen" -l -r --include \*.go --exclude-dir 'vendor' . | xargs dirname {} | sort | uniq | grep -x -v '.' | sed 's|\.\/|github.com/cilium/cilium\/|g'))
-	$(QUIET) $(call generate_deepcopy,${DEEPCOPY_PACKAGES},"$(TMPDIR)")
+	$(QUIET) contrib/scripts/k8s-code-gen.sh "$(TMPDIR)"
 
-	$(QUIET) $(call generate_k8s_api,client,github.com/cilium/cilium/pkg/k8s/slim/k8s/client,github.com/cilium/cilium/pkg/k8s/slim/k8s/api,"discovery:v1beta1 discovery:v1 networking:v1 core:v1","$(TMPDIR)")
-	$(QUIET) $(call generate_k8s_api,client,github.com/cilium/cilium/pkg/k8s/slim/k8s/apiextensions-client,github.com/cilium/cilium/pkg/k8s/slim/k8s/apis,"apiextensions:v1","$(TMPDIR)")
-	$(QUIET) $(call generate_k8s_api,client$(comma)lister$(comma)informer,github.com/cilium/cilium/pkg/k8s/client,github.com/cilium/cilium/pkg/k8s/apis,$(GEN_CRD_GROUPS),"$(TMPDIR)")
-
-	$(QUIET) cp -a -r "$(TMPDIR)/github.com/cilium/cilium/." ./
 	$(QUIET) rm -rf "$(TMPDIR)"
 
 check-k8s-clusterrole: ## Ensures there is no diff between preflight's clusterrole and runtime's clusterrole.
