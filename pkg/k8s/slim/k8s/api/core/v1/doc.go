@@ -4,8 +4,6 @@
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package
 // +k8s:protobuf-gen=package
-// +deepequal-gen=package
-// +groupGoName=core
 
-// Package v1 contains slimmer versions of k8s core types.
-package v1
+// Package v1 is the v1 version of the core API.
+package v1 // import "k8s.io/api/core/v1"
