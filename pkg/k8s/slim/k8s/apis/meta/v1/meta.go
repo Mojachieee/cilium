@@ -6,10 +6,93 @@
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+// TODO: move this, Object, List, and Type to a different package
+type ObjectMetaAccessor interface {
+	GetObjectMeta() Object
+}
+
+// Object lets you work with object metadata from any of the versioned or
+// internal API objects. Attempting to set or retrieve a field on an object that does
+// not support that field (Name, UID, Namespace on lists) will be a no-op and return
+// a default value.
+type Object interface {
+	GetNamespace() string
+	SetNamespace(namespace string)
+	GetName() string
+	SetName(name string)
+	GetGenerateName() string
+	SetGenerateName(name string)
+	GetUID() types.UID
+	SetUID(uid types.UID)
+	GetResourceVersion() string
+	SetResourceVersion(version string)
+	GetGeneration() int64
+	SetGeneration(generation int64)
+	GetSelfLink() string
+	SetSelfLink(selfLink string)
+	GetCreationTimestamp() Time
+	SetCreationTimestamp(timestamp Time)
+	GetDeletionTimestamp() *Time
+	SetDeletionTimestamp(timestamp *Time)
+	GetDeletionGracePeriodSeconds() *int64
+	SetDeletionGracePeriodSeconds(*int64)
+	GetLabels() map[string]string
+	SetLabels(labels map[string]string)
+	GetAnnotations() map[string]string
+	SetAnnotations(annotations map[string]string)
+	GetFinalizers() []string
+	SetFinalizers(finalizers []string)
+	GetOwnerReferences() []OwnerReference
+	SetOwnerReferences([]OwnerReference)
+	GetManagedFields() []ManagedFieldsEntry
+	SetManagedFields(managedFields []ManagedFieldsEntry)
+}
+
+// ListMetaAccessor retrieves the list interface from an object
+type ListMetaAccessor interface {
+	GetListMeta() ListInterface
+}
+
+// Common lets you work with core metadata from any of the versioned or
+// internal API objects. Attempting to set or retrieve a field on an object that does
+// not support that field will be a no-op and return a default value.
+// TODO: move this, and TypeMeta and ListMeta, to a different package
+type Common interface {
+	GetResourceVersion() string
+	SetResourceVersion(version string)
+	GetSelfLink() string
+	SetSelfLink(selfLink string)
+}
+
+// ListInterface lets you work with list metadata from any of the versioned or
+// internal API objects. Attempting to set or retrieve a field on an object that does
+// not support that field will be a no-op and return a default value.
+// TODO: move this, and TypeMeta and ListMeta, to a different package
+type ListInterface interface {
+	GetResourceVersion() string
+	SetResourceVersion(version string)
+	GetSelfLink() string
+	SetSelfLink(selfLink string)
+	GetContinue() string
+	SetContinue(c string)
+	GetRemainingItemCount() *int64
+	SetRemainingItemCount(c *int64)
+}
+
+// Type exposes the type and APIVersion of versioned or internal API objects.
+// TODO: move this, and TypeMeta and ListMeta, to a different package
+type Type interface {
+	GetAPIVersion() string
+	SetAPIVersion(version string)
+	GetKind() string
+	SetKind(kind string)
+}
+
+var _ ListInterface = &ListMeta{}
 
 func (meta *ListMeta) GetResourceVersion() string        { return meta.ResourceVersion }
 func (meta *ListMeta) SetResourceVersion(version string) { meta.ResourceVersion = version }
@@ -32,46 +115,37 @@ func (obj *TypeMeta) GroupVersionKind() schema.GroupVersionKind {
 	return schema.FromAPIVersionAndKind(obj.APIVersion, obj.Kind)
 }
 
-func (obj *ListMeta) GetListMeta() metav1.ListInterface { return obj }
+func (obj *ListMeta) GetListMeta() ListInterface { return obj }
 
-func (obj *ObjectMeta) GetObjectMeta() metav1.Object { return obj }
+func (obj *ObjectMeta) GetObjectMeta() Object { return obj }
 
 // Namespace implements metav1.Object for any object with an ObjectMeta typed field. Allows
 // fast, direct access to metadata fields for API objects.
-func (meta *ObjectMeta) GetNamespace() string          { return meta.Namespace }
-func (meta *ObjectMeta) SetNamespace(namespace string) { meta.Namespace = namespace }
-func (meta *ObjectMeta) GetName() string               { return meta.Name }
-func (meta *ObjectMeta) SetName(name string)           { meta.Name = name }
-func (meta *ObjectMeta) GetGenerateName() string {
-	panic("ObjectMeta - GetGenerateName() not implemented")
+func (meta *ObjectMeta) GetNamespace() string                { return meta.Namespace }
+func (meta *ObjectMeta) SetNamespace(namespace string)       { meta.Namespace = namespace }
+func (meta *ObjectMeta) GetName() string                     { return meta.Name }
+func (meta *ObjectMeta) SetName(name string)                 { meta.Name = name }
+func (meta *ObjectMeta) GetGenerateName() string             { return meta.GenerateName }
+func (meta *ObjectMeta) SetGenerateName(generateName string) { meta.GenerateName = generateName }
+func (meta *ObjectMeta) GetUID() types.UID                   { return meta.UID }
+func (meta *ObjectMeta) SetUID(uid types.UID)                { meta.UID = uid }
+func (meta *ObjectMeta) GetResourceVersion() string          { return meta.ResourceVersion }
+func (meta *ObjectMeta) SetResourceVersion(version string)   { meta.ResourceVersion = version }
+func (meta *ObjectMeta) GetGeneration() int64                { panic("ObjectMeta - GetGeneration() not implemented") }
+func (meta *ObjectMeta) SetGeneration(_ int64)               { panic("ObjectMeta - SetGeneration() not implemented") }
+func (meta *ObjectMeta) GetSelfLink() string                 { panic("ObjectMeta - GetSelfLink() not implemented") }
+func (meta *ObjectMeta) SetSelfLink(_ string) {
+	panic("ObjectMeta - SetSelfLink() not implemented")
 }
-func (meta *ObjectMeta) SetGenerateName(string) {
-	panic("ObjectMeta - SetGenerateName() not implemented")
-}
-func (meta *ObjectMeta) GetUID() types.UID             { return meta.UID }
-func (meta *ObjectMeta) SetUID(uid types.UID)          { meta.UID = uid }
-func (meta *ObjectMeta) GetResourceVersion() string    { return meta.ResourceVersion }
-func (meta *ObjectMeta) SetResourceVersion(ver string) { meta.ResourceVersion = ver }
-func (meta *ObjectMeta) GetGeneration() int64          { panic("ObjectMeta - GetGeneration() not implemented") }
-func (meta *ObjectMeta) SetGeneration(_ int64)         { panic("ObjectMeta - SetGeneration() not implemented") }
-func (meta *ObjectMeta) GetSelfLink() string           { panic("ObjectMeta - GetSelfLink() not implemented") }
-func (meta *ObjectMeta) SetSelfLink(_ string)          { panic("ObjectMeta - SetSelfLink() not implemented") }
-func (meta *ObjectMeta) GetCreationTimestamp() metav1.Time {
+func (meta *ObjectMeta) GetCreationTimestamp() Time {
 	panic("ObjectMeta - GetCreationTimestamp() not implemented")
 }
-func (meta *ObjectMeta) SetCreationTimestamp(_ metav1.Time) {
+func (meta *ObjectMeta) SetCreationTimestamp(_ Time) {
 	panic("ObjectMeta - SetCreationTimestamp() not implemented")
 }
-func (meta *ObjectMeta) GetDeletionTimestamp() *metav1.Time {
-	if meta.DeletionTimestamp == nil {
-		return nil
-	}
-	return &metav1.Time{
-		Time: meta.DeletionTimestamp.Time,
-	}
-}
-func (meta *ObjectMeta) SetDeletionTimestamp(_ *metav1.Time) {
-	panic("ObjectMeta - SetDeletionTimestamp() not implemented")
+func (meta *ObjectMeta) GetDeletionTimestamp() *Time { return meta.DeletionTimestamp }
+func (meta *ObjectMeta) SetDeletionTimestamp(deletionTimestamp *Time) {
+	meta.DeletionTimestamp = deletionTimestamp
 }
 func (meta *ObjectMeta) GetDeletionGracePeriodSeconds() *int64 {
 	panic("ObjectMeta - GetDeletionGracePeriodSeconds() not implemented")
@@ -89,18 +163,13 @@ func (meta *ObjectMeta) GetFinalizers() []string {
 func (meta *ObjectMeta) SetFinalizers(_ []string) {
 	panic("ObjectMeta - SetFinalizers() not implemented")
 }
-func (meta *ObjectMeta) GetOwnerReferences() []metav1.OwnerReference {
-	return FullOwnerReferences(meta.OwnerReferences)
+func (meta *ObjectMeta) GetOwnerReferences() []OwnerReference { return meta.OwnerReferences }
+func (meta *ObjectMeta) SetOwnerReferences(references []OwnerReference) {
+	meta.OwnerReferences = references
 }
-func (meta *ObjectMeta) SetOwnerReferences(references []metav1.OwnerReference) {
-	meta.OwnerReferences = SlimOwnerReferences(references)
-}
-func (meta *ObjectMeta) GetZZZ_DeprecatedClusterName() string  { panic("not implemented") }
-func (meta *ObjectMeta) SetZZZ_DeprecatedClusterName(_ string) { panic("not implemented") }
-
-func (meta *ObjectMeta) GetManagedFields() []metav1.ManagedFieldsEntry {
+func (meta *ObjectMeta) GetManagedFields() []ManagedFieldsEntry {
 	panic("ObjectMeta - GetManagedFields() not implemented")
 }
-func (meta *ObjectMeta) SetManagedFields(_ []metav1.ManagedFieldsEntry) {
+func (meta *ObjectMeta) SetManagedFields(_ []ManagedFieldsEntry) {
 	panic("ObjectMeta - SetManagedFields() not implemented")
 }

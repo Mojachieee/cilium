@@ -6,9 +6,13 @@
 package v1
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/cilium/cilium/pkg/k8s/slim/k8s/apis/labels"
 	"github.com/cilium/cilium/pkg/k8s/slim/k8s/apis/selection"
@@ -57,6 +61,100 @@ func LabelSelectorAsSelector(ps *LabelSelector) (labels.Selector, error) {
 	return selector, nil
 }
 
+// LabelSelectorAsMap converts the LabelSelector api type into a map of strings, ie. the
+// original structure of a label selector. Operators that cannot be converted into plain
+// labels (Exists, DoesNotExist, NotIn, and In with more than one value) will result in
+// an error.
+func LabelSelectorAsMap(ps *LabelSelector) (map[string]string, error) {
+	if ps == nil {
+		return nil, nil
+	}
+	selector := map[string]string{}
+	for k, v := range ps.MatchLabels {
+		selector[k] = v
+	}
+	for _, expr := range ps.MatchExpressions {
+		switch expr.Operator {
+		case LabelSelectorOpIn:
+			if len(expr.Values) != 1 {
+				return selector, fmt.Errorf("operator %q without a single value cannot be converted into the old label selector format", expr.Operator)
+			}
+			// Should we do anything in case this will override a previous key-value pair?
+			selector[expr.Key] = expr.Values[0]
+		case LabelSelectorOpNotIn, LabelSelectorOpExists, LabelSelectorOpDoesNotExist:
+			return selector, fmt.Errorf("operator %q cannot be converted into the old label selector format", expr.Operator)
+		default:
+			return selector, fmt.Errorf("%q is not a valid selector operator", expr.Operator)
+		}
+	}
+	return selector, nil
+}
+
+// ParseToLabelSelector parses a string representing a selector into a LabelSelector object.
+// Note: This function should be kept in sync with the parser in pkg/labels/selector.go
+func ParseToLabelSelector(selector string) (*LabelSelector, error) {
+	reqs, err := labels.ParseToRequirements(selector)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't parse the selector string \"%s\": %v", selector, err)
+	}
+
+	labelSelector := &LabelSelector{
+		MatchLabels:      map[string]string{},
+		MatchExpressions: []LabelSelectorRequirement{},
+	}
+	for _, req := range reqs {
+		var op LabelSelectorOperator
+		switch req.Operator() {
+		case selection.Equals, selection.DoubleEquals:
+			vals := req.Values()
+			if vals.Len() != 1 {
+				return nil, fmt.Errorf("equals operator must have exactly one value")
+			}
+			val, ok := vals.PopAny()
+			if !ok {
+				return nil, fmt.Errorf("equals operator has exactly one value but it cannot be retrieved")
+			}
+			labelSelector.MatchLabels[req.Key()] = val
+			continue
+		case selection.In:
+			op = LabelSelectorOpIn
+		case selection.NotIn:
+			op = LabelSelectorOpNotIn
+		case selection.Exists:
+			op = LabelSelectorOpExists
+		case selection.DoesNotExist:
+			op = LabelSelectorOpDoesNotExist
+		case selection.GreaterThan, selection.LessThan:
+			// Adding a separate case for these operators to indicate that this is deliberate
+			return nil, fmt.Errorf("%q isn't supported in label selectors", req.Operator())
+		default:
+			return nil, fmt.Errorf("%q is not a valid label selector operator", req.Operator())
+		}
+		labelSelector.MatchExpressions = append(labelSelector.MatchExpressions, LabelSelectorRequirement{
+			Key:      req.Key(),
+			Operator: op,
+			Values:   req.Values().List(),
+		})
+	}
+	return labelSelector, nil
+}
+
+// SetAsLabelSelector converts the labels.Set object into a LabelSelector api object.
+func SetAsLabelSelector(ls labels.Set) *LabelSelector {
+	if ls == nil {
+		return nil
+	}
+
+	selector := &LabelSelector{
+		MatchLabels: make(map[string]string, len(ls)),
+	}
+	for label, value := range ls {
+		selector.MatchLabels[label] = value
+	}
+
+	return selector
+}
+
 // FormatLabelSelector convert labelSelector into plain string
 func FormatLabelSelector(labelSelector *LabelSelector) string {
 	selector, err := LabelSelectorAsSelector(labelSelector)
@@ -71,34 +169,120 @@ func FormatLabelSelector(labelSelector *LabelSelector) string {
 	return l
 }
 
-// FullOwnerReferences converts slim OwnerReferences to original OwnerReferences
-func FullOwnerReferences(references []OwnerReference) []metav1.OwnerReference {
-	var fullRefs []metav1.OwnerReference
-	for _, ref := range references {
-		full := metav1.OwnerReference{
-			APIVersion: ref.APIVersion,
-			UID:        ref.UID,
-			Name:       ref.Name,
-			Kind:       ref.Kind,
-			Controller: ref.Controller,
+func ExtractGroupVersions(l *APIGroupList) []string {
+	var groupVersions []string
+	for _, g := range l.Groups {
+		for _, gv := range g.Versions {
+			groupVersions = append(groupVersions, gv.GroupVersion)
 		}
-		fullRefs = append(fullRefs, full)
 	}
-	return fullRefs
+	return groupVersions
 }
 
-// SlimOwnerReferences converts original OwnerReferences to slim OwnerReferences
-func SlimOwnerReferences(references []metav1.OwnerReference) []OwnerReference {
-	var slimRefs []OwnerReference
-	for _, ref := range references {
-		slim := OwnerReference{
-			APIVersion: ref.APIVersion,
-			Name:       ref.Name,
-			UID:        ref.UID,
-			Kind:       ref.Kind,
-			Controller: ref.Controller,
-		}
-		slimRefs = append(slimRefs, slim)
-	}
-	return slimRefs
+// HasAnnotation returns a bool if passed in annotation exists
+func HasAnnotation(obj ObjectMeta, ann string) bool {
+	_, found := obj.Annotations[ann]
+	return found
 }
+
+// SetMetaDataAnnotation sets the annotation and value
+func SetMetaDataAnnotation(obj *ObjectMeta, ann string, value string) {
+	if obj.Annotations == nil {
+		obj.Annotations = make(map[string]string)
+	}
+	obj.Annotations[ann] = value
+}
+
+// HasLabel returns a bool if passed in label exists
+func HasLabel(obj ObjectMeta, label string) bool {
+	_, found := obj.Labels[label]
+	return found
+}
+
+// SetMetaDataLabel sets the label and value
+func SetMetaDataLabel(obj *ObjectMeta, label string, value string) {
+	if obj.Labels == nil {
+		obj.Labels = make(map[string]string)
+	}
+	obj.Labels[label] = value
+}
+
+// SingleObject returns a ListOptions for watching a single object.
+func SingleObject(meta ObjectMeta) ListOptions {
+	return ListOptions{
+		FieldSelector:   fields.OneTermEqualSelector("metadata.name", meta.Name).String(),
+		ResourceVersion: meta.ResourceVersion,
+	}
+}
+
+// NewDeleteOptions returns a DeleteOptions indicating the resource should
+// be deleted within the specified grace period. Use zero to indicate
+// immediate deletion. If you would prefer to use the default grace period,
+// use &metav1.DeleteOptions{} directly.
+func NewDeleteOptions(grace int64) *DeleteOptions {
+	return &DeleteOptions{GracePeriodSeconds: &grace}
+}
+
+// NewPreconditionDeleteOptions returns a DeleteOptions with a UID precondition set.
+func NewPreconditionDeleteOptions(uid string) *DeleteOptions {
+	u := types.UID(uid)
+	p := Preconditions{UID: &u}
+	return &DeleteOptions{Preconditions: &p}
+}
+
+// NewUIDPreconditions returns a Preconditions with UID set.
+func NewUIDPreconditions(uid string) *Preconditions {
+	u := types.UID(uid)
+	return &Preconditions{UID: &u}
+}
+
+// NewRVDeletionPrecondition returns a DeleteOptions with a ResourceVersion precondition set.
+func NewRVDeletionPrecondition(rv string) *DeleteOptions {
+	p := Preconditions{ResourceVersion: &rv}
+	return &DeleteOptions{Preconditions: &p}
+}
+
+// HasObjectMetaSystemFieldValues returns true if fields that are managed by the system on ObjectMeta have values.
+func HasObjectMetaSystemFieldValues(meta Object) bool {
+	return !meta.GetCreationTimestamp().Time.IsZero() ||
+		len(meta.GetUID()) != 0
+}
+
+// ResetObjectMetaForStatus forces the meta fields for a status update to match the meta fields
+// for a pre-existing object. This is opt-in for new objects with Status subresource.
+func ResetObjectMetaForStatus(meta, existingMeta Object) {
+	meta.SetDeletionTimestamp(existingMeta.GetDeletionTimestamp())
+	meta.SetGeneration(existingMeta.GetGeneration())
+	meta.SetSelfLink(existingMeta.GetSelfLink())
+	meta.SetLabels(existingMeta.GetLabels())
+	meta.SetAnnotations(existingMeta.GetAnnotations())
+	meta.SetFinalizers(existingMeta.GetFinalizers())
+	meta.SetOwnerReferences(existingMeta.GetOwnerReferences())
+	// managedFields must be preserved since it's been modified to
+	// track changed fields in the status update.
+	//meta.SetManagedFields(existingMeta.GetManagedFields())
+}
+
+// MarshalJSON implements json.Marshaler
+// MarshalJSON may get called on pointers or values, so implement MarshalJSON on value.
+// http://stackoverflow.com/questions/21390979/custom-marshaljson-never-gets-called-in-go
+func (f FieldsV1) MarshalJSON() ([]byte, error) {
+	if f.Raw == nil {
+		return []byte("null"), nil
+	}
+	return f.Raw, nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (f *FieldsV1) UnmarshalJSON(b []byte) error {
+	if f == nil {
+		return errors.New("metav1.Fields: UnmarshalJSON on nil pointer")
+	}
+	if !bytes.Equal(b, []byte("null")) {
+		f.Raw = append(f.Raw[0:0], b...)
+	}
+	return nil
+}
+
+var _ json.Marshaler = FieldsV1{}
+var _ json.Unmarshaler = &FieldsV1{}

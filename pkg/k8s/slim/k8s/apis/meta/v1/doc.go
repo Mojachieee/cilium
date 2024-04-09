@@ -5,8 +5,7 @@
 // +k8s:deepcopy-gen=package
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
-// +groupName=meta
-// +deepequal-gen=package
 
-// Package types contains slimmer versions of k8s types.
-package v1
+// +groupName=meta.k8s.io
+
+package v1 // import "k8s.io/apimachinery/pkg/apis/meta/v1"

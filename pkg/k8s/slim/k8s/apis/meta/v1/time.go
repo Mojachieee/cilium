@@ -17,11 +17,8 @@ import (
 // +protobuf.options.marshal=false
 // +protobuf.as=Timestamp
 // +protobuf.options.(gogoproto.goproto_stringer)=false
-//
-// +kubebuilder:validation:Format=date-time
-// +kubebuilder:validation:Type=string
 type Time struct {
-	time.Time `protobuf:"-" json:"-"`
+	time.Time `protobuf:"-"`
 }
 
 // DeepCopyInto creates a deep-copy of the Time value.  The underlying time.Time
@@ -29,16 +26,6 @@ type Time struct {
 // copy-by-assign, despite the presence of (unexported) Pointer fields.
 func (t *Time) DeepCopyInto(out *Time) {
 	*out = *t
-}
-
-func (in *Time) DeepEqual(other *Time) bool {
-	switch {
-	case (in == nil) != (other == nil):
-		return false
-	case (in == nil) && (other == nil):
-		return true
-	}
-	return in.Time.Equal(other.Time)
 }
 
 // NewTime returns a wrapped instance of the provided time

@@ -42,9 +42,43 @@ var scheme = runtime.NewScheme()
 // ParameterCodec knows about query parameters used with the meta v1 API spec.
 var ParameterCodec = runtime.NewParameterCodec(scheme)
 
+var optionsTypes = []runtime.Object{
+	&ListOptions{},
+	&GetOptions{},
+	&DeleteOptions{},
+	&CreateOptions{},
+	&UpdateOptions{},
+	&PatchOptions{},
+}
+
+// AddToGroupVersion registers common meta types into schemas.
+func AddToGroupVersion(scheme *runtime.Scheme, groupVersion schema.GroupVersion) {
+	scheme.AddKnownTypeWithName(groupVersion.WithKind(WatchEventKind), &WatchEvent{})
+	scheme.AddKnownTypeWithName(
+		schema.GroupVersion{Group: groupVersion.Group, Version: runtime.APIVersionInternal}.WithKind(WatchEventKind),
+		&InternalEvent{},
+	)
+	// Supports legacy code paths, most callers should use metav1.ParameterCodec for now
+	scheme.AddKnownTypes(groupVersion, optionsTypes...)
+	// Register Unversioned types under their own special group
+	scheme.AddUnversionedTypes(Unversioned,
+		&Status{},
+		&APIVersions{},
+		&APIGroupList{},
+		&APIGroup{},
+		&APIResourceList{},
+	)
+
+	// register manually. This usually goes through the SchemeBuilder, which we cannot use here.
+	utilruntime.Must(RegisterConversions(scheme))
+	utilruntime.Must(RegisterDefaults(scheme))
+}
+
 // AddMetaToScheme registers base meta types into schemas.
 func AddMetaToScheme(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&Table{},
+		&TableOptions{},
 		&PartialObjectMetadata{},
 		&PartialObjectMetadataList{},
 	)
@@ -53,7 +87,7 @@ func AddMetaToScheme(scheme *runtime.Scheme) error {
 }
 
 func init() {
-	scheme.AddUnversionedTypes(SchemeGroupVersion)
+	scheme.AddUnversionedTypes(SchemeGroupVersion, optionsTypes...)
 
 	utilruntime.Must(AddMetaToScheme(scheme))
 
