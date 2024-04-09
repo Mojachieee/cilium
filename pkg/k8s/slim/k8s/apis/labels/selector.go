@@ -267,8 +267,8 @@ func (r *Requirement) Operator() selection.Operator {
 }
 
 // Values returns requirement values
-func (r *Requirement) Values() sets.Set[string] {
-	ret := sets.New[string]()
+func (r *Requirement) Values() sets.String {
+	ret := sets.String{}
 	for i := range r.strValues {
 		ret.Insert(r.strValues[i])
 	}
@@ -587,6 +587,7 @@ type Parser struct {
 	l            *Lexer
 	scannedItems []ScannedItem
 	position     int
+	path         *field.Path
 }
 
 // ParserContext represents context during parsing:
@@ -651,7 +652,7 @@ func (p *Parser) parse() (internalSelector, error) {
 		case IdentifierToken, DoesNotExistToken:
 			r, err := p.parseRequirement()
 			if err != nil {
-				return nil, fmt.Errorf("unable to parse requirement: %w", err)
+				return nil, fmt.Errorf("unable to parse requirement: %v", err)
 			}
 			requirements = append(requirements, *r)
 			t, l := p.consume(Values)
@@ -680,13 +681,13 @@ func (p *Parser) parseRequirement() (*Requirement, error) {
 		return nil, err
 	}
 	if operator == selection.Exists || operator == selection.DoesNotExist { // operator found lookahead set checked
-		return NewRequirement(key, operator, []string{})
+		return NewRequirement(key, operator, []string{}, field.WithPath(p.path))
 	}
 	operator, err = p.parseOperator()
 	if err != nil {
 		return nil, err
 	}
-	var values sets.Set[string]
+	var values sets.String
 	switch operator {
 	case selection.In, selection.NotIn:
 		values, err = p.parseValues()
@@ -696,7 +697,7 @@ func (p *Parser) parseRequirement() (*Requirement, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewRequirement(key, operator, sets.List(values))
+	return NewRequirement(key, operator, values.List(), field.WithPath(p.path))
 
 }
 
@@ -714,7 +715,7 @@ func (p *Parser) parseKeyAndInferOperator() (string, selection.Operator, error) 
 		err := fmt.Errorf("found '%s', expected: identifier", literal)
 		return "", "", err
 	}
-	if err := validateLabelKey(literal, nil); err != nil {
+	if err := validateLabelKey(literal, p.path); err != nil {
 		return "", "", err
 	}
 	if t, _ := p.lookahead(Values); t == EndOfStringToken || t == CommaToken {
@@ -752,7 +753,7 @@ func (p *Parser) parseOperator() (op selection.Operator, err error) {
 }
 
 // parseValues parses the values for set based matching (x,y,z)
-func (p *Parser) parseValues() (sets.Set[string], error) {
+func (p *Parser) parseValues() (sets.String, error) {
 	tok, lit := p.consume(Values)
 	if tok != OpenParToken {
 		return nil, fmt.Errorf("found '%s' expected: '('", lit)
@@ -770,7 +771,7 @@ func (p *Parser) parseValues() (sets.Set[string], error) {
 		return s, nil
 	case ClosedParToken: // handles "()"
 		p.consume(Values)
-		return sets.New[string](""), nil
+		return sets.NewString(""), nil
 	default:
 		return nil, fmt.Errorf("found '%s', expected: ',', ')' or identifier", lit)
 	}
@@ -778,8 +779,8 @@ func (p *Parser) parseValues() (sets.Set[string], error) {
 
 // parseIdentifiersList parses a (possibly empty) list of
 // of comma separated (possibly empty) identifiers
-func (p *Parser) parseIdentifiersList() (sets.Set[string], error) {
-	s := sets.New[string]()
+func (p *Parser) parseIdentifiersList() (sets.String, error) {
+	s := sets.NewString()
 	for {
 		tok, lit := p.consume(Values)
 		switch tok {
@@ -814,8 +815,8 @@ func (p *Parser) parseIdentifiersList() (sets.Set[string], error) {
 }
 
 // parseExactValue parses the only value for exact match style
-func (p *Parser) parseExactValue() (sets.Set[string], error) {
-	s := sets.New[string]()
+func (p *Parser) parseExactValue() (sets.String, error) {
+	s := sets.NewString()
 	tok, _ := p.lookahead(Values)
 	if tok == EndOfStringToken || tok == CommaToken {
 		s.Insert("")
@@ -872,8 +873,8 @@ func Parse(selector string, opts ...field.PathOption) (Selector, error) {
 // The callers of this method can then decide how to return the internalSelector struct to their
 // callers. This function has two callers now, one returns a Selector interface and the other
 // returns a list of requirements.
-func parse(selector string, _ *field.Path) (internalSelector, error) {
-	p := &Parser{l: &Lexer{s: selector, pos: 0}}
+func parse(selector string, path *field.Path) (internalSelector, error) {
+	p := &Parser{l: &Lexer{s: selector, pos: 0}, path: path}
 	items, err := p.parse()
 	if err != nil {
 		return nil, err
@@ -908,7 +909,7 @@ func SelectorFromSet(ls Set) Selector {
 // nil and empty Sets are considered equivalent to Everything().
 // The Set is validated client-side, which allows to catch errors early.
 func ValidatedSelectorFromSet(ls Set) (Selector, error) {
-	if len(ls) == 0 {
+	if ls == nil || len(ls) == 0 {
 		return internalSelector{}, nil
 	}
 	requirements := make([]Requirement, 0, len(ls))
@@ -930,7 +931,7 @@ func ValidatedSelectorFromSet(ls Set) (Selector, error) {
 // Note: this method copies the Set; if the Set is immutable, consider wrapping it with ValidatedSetSelector
 // instead, which does not copy.
 func SelectorFromValidatedSet(ls Set) Selector {
-	if len(ls) == 0 {
+	if ls == nil || len(ls) == 0 {
 		return internalSelector{}
 	}
 	requirements := make([]Requirement, 0, len(ls))
@@ -950,3 +951,76 @@ func SelectorFromValidatedSet(ls Set) Selector {
 func ParseToRequirements(selector string, opts ...field.PathOption) ([]Requirement, error) {
 	return parse(selector, field.ToPath(opts...))
 }
+
+// ValidatedSetSelector wraps a Set, allowing it to implement the Selector interface. Unlike
+// Set.AsSelectorPreValidated (which copies the input Set), this type simply wraps the underlying
+// Set. As a result, it is substantially more efficient. A nil and empty Sets are considered
+// equivalent to Everything().
+//
+// Callers MUST ensure the underlying Set is not mutated, and that it is already validated. If these
+// constraints are not met, Set.AsValidatedSelector should be preferred
+//
+// None of the Selector methods mutate the underlying Set, but Add() and Requirements() convert to
+// the less optimized version.
+type ValidatedSetSelector Set
+
+func (s ValidatedSetSelector) Matches(labels Labels) bool {
+	for k, v := range s {
+		if !labels.Has(k) || v != labels.Get(k) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s ValidatedSetSelector) Empty() bool {
+	return len(s) == 0
+}
+
+func (s ValidatedSetSelector) String() string {
+	keys := make([]string, 0, len(s))
+	for k := range s {
+		keys = append(keys, k)
+	}
+	// Ensure deterministic output
+	sort.Strings(keys)
+	b := strings.Builder{}
+	for i, key := range keys {
+		v := s[key]
+		b.Grow(len(key) + 2 + len(v))
+		if i != 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(key)
+		b.WriteString("=")
+		b.WriteString(v)
+	}
+	return b.String()
+}
+
+func (s ValidatedSetSelector) Add(r ...Requirement) Selector {
+	return s.toFullSelector().Add(r...)
+}
+
+func (s ValidatedSetSelector) Requirements() (requirements Requirements, selectable bool) {
+	return s.toFullSelector().Requirements()
+}
+
+func (s ValidatedSetSelector) DeepCopySelector() Selector {
+	res := make(ValidatedSetSelector, len(s))
+	for k, v := range s {
+		res[k] = v
+	}
+	return res
+}
+
+func (s ValidatedSetSelector) RequiresExactMatch(label string) (value string, found bool) {
+	v, f := s[label]
+	return v, f
+}
+
+func (s ValidatedSetSelector) toFullSelector() Selector {
+	return SelectorFromValidatedSet(Set(s))
+}
+
+var _ Selector = ValidatedSetSelector{}
