@@ -21,9 +21,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/cilium/hubble/cmd/common/config"
-	"github.com/cilium/hubble/cmd/common/conn"
-	"github.com/cilium/hubble/cmd/common/template"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/cmd/common/conn"
+	"github.com/cilium/cilium/hubble/cmd/common/template"
 )
 
 const (

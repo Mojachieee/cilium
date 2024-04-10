@@ -7,8 +7,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/cilium/hubble/cmd/common/config"
-	"github.com/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

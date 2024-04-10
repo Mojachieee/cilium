@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cilium/hubble/cmd/common/config"
-	"github.com/cilium/hubble/cmd/common/conn"
-	"github.com/cilium/hubble/cmd/common/template"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/cmd/common/conn"
+	"github.com/cilium/cilium/hubble/cmd/common/template"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"

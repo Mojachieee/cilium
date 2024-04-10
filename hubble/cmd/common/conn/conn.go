@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cilium/hubble/cmd/common/config"
-	"github.com/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/timeout"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"

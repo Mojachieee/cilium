@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/cilium/hubble/pkg"
+	"github.com/cilium/cilium/hubble/pkg"
 
 	"github.com/spf13/cobra"
 )

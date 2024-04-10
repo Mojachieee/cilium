@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cilium/hubble/cmd/common/config"
-	hubprinter "github.com/cilium/hubble/pkg/printer"
-	hubtime "github.com/cilium/hubble/pkg/time"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	hubprinter "github.com/cilium/cilium/hubble/pkg/printer"
+	hubtime "github.com/cilium/cilium/hubble/pkg/time"
 )
 
 func handleEventsArgs(writer io.Writer, debug bool) error {

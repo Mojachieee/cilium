@@ -6,7 +6,7 @@ package config
 import (
 	"strings"
 
-	"github.com/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/viper"
 )
 

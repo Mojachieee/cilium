@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	observerpb "github.com/cilium/cilium/api/v1/observer"
-	"github.com/cilium/hubble/cmd/observe"
-	"github.com/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/cmd/observe"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

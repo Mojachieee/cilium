@@ -14,7 +14,7 @@ import (
 	"github.com/cilium/cilium/pkg/container"
 	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
 	"github.com/cilium/cilium/pkg/hubble/filters"
-	"github.com/cilium/hubble/pkg/logger"
+	"github.com/cilium/cilium/hubble/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

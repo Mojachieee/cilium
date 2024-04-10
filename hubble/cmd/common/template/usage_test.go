@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"

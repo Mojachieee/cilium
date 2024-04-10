@@ -4,7 +4,7 @@
 package config
 
 import (
-	"github.com/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/pflag"
 )
 

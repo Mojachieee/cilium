@@ -12,7 +12,7 @@ import (
 
 	flowpb "github.com/cilium/cilium/api/v1/flow"
 	observerpb "github.com/cilium/cilium/api/v1/observer"
-	"github.com/cilium/hubble/pkg/logger"
+	"github.com/cilium/cilium/hubble/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/timestamppb"

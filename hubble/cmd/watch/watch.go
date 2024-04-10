@@ -4,8 +4,8 @@
 package watch
 
 import (
-	"github.com/cilium/hubble/cmd/common/config"
-	"github.com/cilium/hubble/cmd/common/template"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/cmd/common/template"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
