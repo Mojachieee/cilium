@@ -9,14 +9,15 @@ import (
 	"io"
 	"text/tabwriter"
 
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	"github.com/cilium/cilium/hubble/cmd/common/config"
-	"github.com/cilium/cilium/hubble/cmd/common/conn"
-	"github.com/cilium/cilium/hubble/cmd/common/template"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/cmd/common/conn"
+	"github.com/cilium/cilium/hubble/cmd/common/template"
 )
 
 func newNamespacesCommand(vp *viper.Viper) *cobra.Command {

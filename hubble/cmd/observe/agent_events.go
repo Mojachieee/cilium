@@ -12,6 +12,13 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	observerpb "github.com/cilium/cilium/api/v1/observer"
 	"github.com/cilium/cilium/hubble/cmd/common/config"
 	"github.com/cilium/cilium/hubble/cmd/common/conn"
@@ -19,12 +26,6 @@ import (
 	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/cilium/cilium/hubble/pkg/logger"
 	hubtime "github.com/cilium/cilium/hubble/pkg/time"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func newAgentEventsCommand(vp *viper.Viper) *cobra.Command {
@@ -77,12 +78,12 @@ func getAgentEventsRequest() (*observerpb.GetAgentEventsRequest, error) {
 	if selectorOpts.since != "" {
 		st, err := hubtime.FromString(selectorOpts.since)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the since time: %v", err)
+			return nil, fmt.Errorf("failed to parse the since time: %w", err)
 		}
 
 		since = timestamppb.New(st)
 		if err := since.CheckValid(); err != nil {
-			return nil, fmt.Errorf("failed to convert `since` timestamp to proto: %v", err)
+			return nil, fmt.Errorf("failed to convert `since` timestamp to proto: %w", err)
 		}
 	}
 	// Set the until field if --until option is specified and --follow
@@ -91,11 +92,11 @@ func getAgentEventsRequest() (*observerpb.GetAgentEventsRequest, error) {
 	if selectorOpts.until != "" && !selectorOpts.follow {
 		ut, err := hubtime.FromString(selectorOpts.until)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the until time: %v", err)
+			return nil, fmt.Errorf("failed to parse the until time: %w", err)
 		}
 		until = timestamppb.New(ut)
 		if err := until.CheckValid(); err != nil {
-			return nil, fmt.Errorf("failed to convert `until` timestamp to proto: %v", err)
+			return nil, fmt.Errorf("failed to convert `until` timestamp to proto: %w", err)
 		}
 	}
 
@@ -127,10 +128,10 @@ func getAgentEvents(ctx context.Context, client observerpb.ObserverClient, req *
 
 	for {
 		resp, err := b.Recv()
-		switch err {
-		case io.EOF, context.Canceled:
+		switch {
+		case errors.Is(err, io.EOF), errors.Is(err, context.Canceled):
 			return nil
-		case nil:
+		case err == nil:
 		default:
 			if status.Code(err) == codes.Canceled {
 				return nil

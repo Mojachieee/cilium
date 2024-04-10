@@ -7,6 +7,10 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+
 	"github.com/cilium/cilium/hubble/cmd/common/config"
 	"github.com/cilium/cilium/hubble/cmd/common/conn"
 	"github.com/cilium/cilium/hubble/cmd/common/template"
@@ -21,10 +25,6 @@ import (
 	"github.com/cilium/cilium/hubble/cmd/watch"
 	"github.com/cilium/cilium/hubble/pkg"
 	"github.com/cilium/cilium/hubble/pkg/logger"
-	"google.golang.org/grpc"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // New create a new root command.

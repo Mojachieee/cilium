@@ -6,14 +6,15 @@ package observe
 import (
 	"fmt"
 	"strings"
-	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 
 	"github.com/cilium/cilium/hubble/pkg/defaults"
 	hubprinter "github.com/cilium/cilium/hubble/pkg/printer"
 	hubtime "github.com/cilium/cilium/hubble/pkg/time"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
+	"github.com/cilium/cilium/pkg/time"
 )
 
 var (

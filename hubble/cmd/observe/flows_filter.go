@@ -11,10 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	flowpb "github.com/cilium/cilium/api/v1/flow"
-	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 	"github.com/spf13/pflag"
 	"google.golang.org/protobuf/proto"
+
+	flowpb "github.com/cilium/cilium/api/v1/flow"
+	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 )
 
 type (
@@ -581,7 +582,7 @@ func (of *flowFilter) set(f *filterTracker, name, val string, track bool) error 
 		} else {
 			t, err := strconv.ParseUint(s[0], 10, 32)
 			if err != nil {
-				return fmt.Errorf("unable to parse type '%s', not a known type name and unable to parse as numeric value: %s", s[0], err)
+				return fmt.Errorf("unable to parse type '%s', not a known type name and unable to parse as numeric value: %w", s[0], err)
 			}
 			typeFilter.Type = int32(t)
 		}
@@ -607,7 +608,7 @@ func (of *flowFilter) set(f *filterTracker, name, val string, track bool) error 
 			if !typeFilter.GetMatchSubType() {
 				t, err := strconv.ParseUint(s[1], 10, 32)
 				if err != nil {
-					return fmt.Errorf("unable to parse event sub-type '%s', not a known sub-type name and unable to parse as numeric value: %s", s[1], err)
+					return fmt.Errorf("unable to parse event sub-type '%s', not a known sub-type name and unable to parse as numeric value: %w", s[1], err)
 				}
 				typeFilter.MatchSubType = true
 				typeFilter.SubType = int32(t)

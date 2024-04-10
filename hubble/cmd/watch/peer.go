@@ -5,18 +5,20 @@ package watch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	peerpb "github.com/cilium/cilium/api/v1/peer"
 	"github.com/cilium/cilium/hubble/cmd/common/config"
 	"github.com/cilium/cilium/hubble/cmd/common/conn"
 	"github.com/cilium/cilium/hubble/cmd/common/template"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func newPeerCommand(vp *viper.Viper) *cobra.Command {
@@ -48,10 +50,10 @@ func runPeer(ctx context.Context, client peerpb.PeerClient) error {
 	}
 	for {
 		resp, err := b.Recv()
-		switch err {
-		case io.EOF, context.Canceled:
+		switch {
+		case errors.Is(err, io.EOF), errors.Is(err, context.Canceled):
 			return nil
-		case nil:
+		case err == nil:
 			processResponse(os.Stdout, resp)
 		default:
 			if status.Code(err) == codes.Canceled {

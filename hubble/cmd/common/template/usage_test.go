@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
+
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 )
 
 func TestUsage(t *testing.T) {

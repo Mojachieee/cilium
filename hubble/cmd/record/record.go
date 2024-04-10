@@ -12,18 +12,18 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
-	recorderpb "github.com/cilium/cilium/api/v1/recorder"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	recorderpb "github.com/cilium/cilium/api/v1/recorder"
 	"github.com/cilium/cilium/hubble/cmd/common/config"
 	"github.com/cilium/cilium/hubble/cmd/common/conn"
 	"github.com/cilium/cilium/hubble/cmd/common/template"
+	"github.com/cilium/cilium/pkg/time"
 )
 
 const (

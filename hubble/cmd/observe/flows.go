@@ -15,16 +15,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	flowpb "github.com/cilium/cilium/api/v1/flow"
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
-	"github.com/cilium/cilium/hubble/cmd/common/config"
-	"github.com/cilium/cilium/hubble/cmd/common/conn"
-	"github.com/cilium/cilium/hubble/cmd/common/template"
-	"github.com/cilium/cilium/hubble/pkg/defaults"
-	"github.com/cilium/cilium/hubble/pkg/logger"
-	hubprinter "github.com/cilium/cilium/hubble/pkg/printer"
-	hubtime "github.com/cilium/cilium/hubble/pkg/time"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -33,6 +23,17 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/yaml.v3"
+
+	flowpb "github.com/cilium/cilium/api/v1/flow"
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/cmd/common/conn"
+	"github.com/cilium/cilium/hubble/cmd/common/template"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/hubble/pkg/logger"
+	hubprinter "github.com/cilium/cilium/hubble/pkg/printer"
+	hubtime "github.com/cilium/cilium/hubble/pkg/time"
+	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 )
 
 // see protocol filter in Hubble server code (there is unfortunately no
@@ -699,7 +700,7 @@ func parseRawFilters(filters []string) ([]*flowpb.FlowFilter, error) {
 		for {
 			var result flowpb.FlowFilter
 			if err := dec.Decode(&result); err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					break
 				}
 				return nil, fmt.Errorf("failed to decode '%v': %w", f, err)
@@ -731,12 +732,12 @@ func getFlowsRequest(ofilter *flowFilter, allowlist []string, denylist []string)
 	if selectorOpts.since != "" {
 		st, err := hubtime.FromString(selectorOpts.since)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the since time: %v", err)
+			return nil, fmt.Errorf("failed to parse the since time: %w", err)
 		}
 
 		since = timestamppb.New(st)
 		if err := since.CheckValid(); err != nil {
-			return nil, fmt.Errorf("failed to convert `since` timestamp to proto: %v", err)
+			return nil, fmt.Errorf("failed to convert `since` timestamp to proto: %w", err)
 		}
 	}
 	// Set the until field if --until option is specified and --follow
@@ -745,11 +746,11 @@ func getFlowsRequest(ofilter *flowFilter, allowlist []string, denylist []string)
 	if selectorOpts.until != "" && !selectorOpts.follow {
 		ut, err := hubtime.FromString(selectorOpts.until)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the until time: %v", err)
+			return nil, fmt.Errorf("failed to parse the until time: %w", err)
 		}
 		until = timestamppb.New(ut)
 		if err := until.CheckValid(); err != nil {
-			return nil, fmt.Errorf("failed to convert `until` timestamp to proto: %v", err)
+			return nil, fmt.Errorf("failed to convert `until` timestamp to proto: %w", err)
 		}
 	}
 
@@ -826,10 +827,10 @@ func getFlows(ctx context.Context, client observerpb.ObserverClient, req *observ
 
 	for {
 		getFlowResponse, err := b.Recv()
-		switch err {
-		case io.EOF, context.Canceled:
+		switch {
+		case errors.Is(err, io.EOF), errors.Is(err, context.Canceled):
 			return nil
-		case nil:
+		case err == nil:
 		default:
 			if status.Code(err) == codes.Canceled {
 				return nil

@@ -10,12 +10,13 @@ import (
 	"fmt"
 	"testing"
 
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	"github.com/cilium/cilium/hubble/cmd/observe"
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	"github.com/cilium/cilium/hubble/cmd/observe"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 )
 
 //go:embed observe_help.txt

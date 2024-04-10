@@ -11,11 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cilium/cilium/hubble/cmd/common/config"
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 )
 
 func grpcOptionTLS(vp *viper.Viper) (grpc.DialOption, error) {
@@ -25,7 +26,7 @@ func grpcOptionTLS(vp *viper.Viper) (grpc.DialOption, error) {
 	}
 
 	tlsConfig := tls.Config{
-		InsecureSkipVerify: vp.GetBool(config.KeyTLSAllowInsecure),
+		InsecureSkipVerify: vp.GetBool(config.KeyTLSAllowInsecure), // #nosec G402
 		ServerName:         vp.GetString(config.KeyTLSServerName),
 	}
 
@@ -36,7 +37,7 @@ func grpcOptionTLS(vp *viper.Viper) (grpc.DialOption, error) {
 		for _, path := range caFiles {
 			certPEM, err := os.ReadFile(filepath.Clean(path))
 			if err != nil {
-				return nil, fmt.Errorf("cannot load cert '%s': %s", path, err)
+				return nil, fmt.Errorf("cannot load cert '%s': %w", path, err)
 			}
 			if ok := ca.AppendCertsFromPEM(certPEM); !ok {
 				return nil, fmt.Errorf("cannot process cert '%s': must be a PEM encoded certificate", path)

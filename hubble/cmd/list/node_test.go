@@ -7,10 +7,11 @@ import (
 	"bytes"
 	"testing"
 
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	relaypb "github.com/cilium/cilium/api/v1/relay"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	relaypb "github.com/cilium/cilium/api/v1/relay"
 )
 
 func TestNodeOutputs(t *testing.T) {

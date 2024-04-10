@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"testing"
 
-	peerpb "github.com/cilium/cilium/api/v1/peer"
 	"github.com/stretchr/testify/assert"
+
+	peerpb "github.com/cilium/cilium/api/v1/peer"
 )
 
 func Test_processResponse(t *testing.T) {

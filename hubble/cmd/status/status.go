@@ -9,17 +9,18 @@ import (
 	"fmt"
 	"io"
 
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
-	"github.com/cilium/cilium/hubble/cmd/common/config"
-	"github.com/cilium/cilium/hubble/cmd/common/conn"
-	"github.com/cilium/cilium/hubble/cmd/common/template"
-	"github.com/cilium/cilium/hubble/pkg/printer"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/cmd/common/conn"
+	"github.com/cilium/cilium/hubble/cmd/common/template"
+	"github.com/cilium/cilium/hubble/pkg/printer"
+	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
 )
 
 var formattingOpts struct {
@@ -77,7 +78,7 @@ func runStatus(ctx context.Context, out io.Writer, conn *grpc.ClientConn) error 
 	// get the standard GRPC health check to see if the server is up
 	healthy, status, err := getHC(ctx, conn)
 	if err != nil {
-		return fmt.Errorf("failed getting status: %v", err)
+		return fmt.Errorf("failed getting status: %w", err)
 	}
 	if formattingOpts.output == "compact" {
 		fmt.Fprintf(out, "Healthcheck (via %s): %s\n", conn.Target(), status)
@@ -89,7 +90,7 @@ func runStatus(ctx context.Context, out io.Writer, conn *grpc.ClientConn) error 
 	// if the server is up, lets try to get hubble specific status
 	ss, err := getStatus(ctx, conn)
 	if err != nil {
-		return fmt.Errorf("failed to get hubble server status: %v", err)
+		return fmt.Errorf("failed to get hubble server status: %w", err)
 	}
 
 	var opts = []printer.Option{

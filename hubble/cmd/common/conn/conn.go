@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/cilium/cilium/hubble/cmd/common/config"
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/timeout"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+
+	"github.com/cilium/cilium/hubble/cmd/common/config"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
+	"github.com/cilium/cilium/pkg/time"
 )
 
 // GRPCOptionFunc is a function that configures a gRPC dial option.

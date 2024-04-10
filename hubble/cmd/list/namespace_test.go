@@ -7,9 +7,10 @@ import (
 	"bytes"
 	"testing"
 
-	observerpb "github.com/cilium/cilium/api/v1/observer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	observerpb "github.com/cilium/cilium/api/v1/observer"
 )
 
 func TestNamespaceOutputs(t *testing.T) {

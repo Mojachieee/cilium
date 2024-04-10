@@ -4,8 +4,9 @@
 package config
 
 import (
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/pflag"
+
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 )
 
 // Keys can be used to retrieve values from GlobalFlags and ServerFlags (e.g.

@@ -11,10 +11,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cilium/cilium/hubble/cmd/common/config"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/cilium/cilium/hubble/cmd/common/config"
 )
 
 func newSetCommand(vp *viper.Viper) *cobra.Command {
@@ -125,7 +126,8 @@ func newFileOnlyViper(configPath string) (*viper.Viper, error) {
 	if err := vp.ReadInConfig(); err != nil {
 		// it's OK so long as the failure is ConfigFileNotFound
 		// for all other cases, failing to read the config should be an error
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
 			return nil, err
 		}
 	}

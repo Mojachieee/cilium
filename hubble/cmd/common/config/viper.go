@@ -6,8 +6,9 @@ package config
 import (
 	"strings"
 
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/spf13/viper"
+
+	"github.com/cilium/cilium/hubble/pkg/defaults"
 )
 
 // NewViper creates a new viper instance configured for Hubble.

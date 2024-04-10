@@ -8,8 +8,8 @@ import (
 	"time"
 
 	observerpb "github.com/cilium/cilium/api/v1/observer"
-	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 	"github.com/cilium/cilium/hubble/pkg/defaults"
+	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

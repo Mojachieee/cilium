@@ -11,14 +11,15 @@ import (
 	"testing"
 	"time"
 
-	flowpb "github.com/cilium/cilium/api/v1/flow"
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
-	"github.com/cilium/cilium/hubble/pkg/defaults"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	flowpb "github.com/cilium/cilium/api/v1/flow"
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	"github.com/cilium/cilium/hubble/pkg/defaults"
+	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 )
 
 func TestEventTypes(t *testing.T) {

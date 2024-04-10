@@ -6,8 +6,9 @@ package observe
 import (
 	"testing"
 
-	flowpb "github.com/cilium/cilium/api/v1/flow"
 	"github.com/stretchr/testify/assert"
+
+	flowpb "github.com/cilium/cilium/api/v1/flow"
 )
 
 func TestParseWorkload(t *testing.T) {

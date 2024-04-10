@@ -10,15 +10,16 @@ import (
 	"io"
 	"math"
 
-	observerpb "github.com/cilium/cilium/api/v1/observer"
-	"github.com/cilium/cilium/pkg/container"
-	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
-	"github.com/cilium/cilium/pkg/hubble/filters"
-	"github.com/cilium/cilium/hubble/pkg/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	observerpb "github.com/cilium/cilium/api/v1/observer"
+	"github.com/cilium/cilium/hubble/pkg/logger"
+	"github.com/cilium/cilium/pkg/container"
+	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
+	"github.com/cilium/cilium/pkg/hubble/filters"
 )
 
 // IOReaderObserver implements ObserverClient interface. It reads flows
