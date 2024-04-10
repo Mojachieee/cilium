@@ -20,11 +20,6 @@ RELEASE_GID ?= $(shell id -g)
 
 TEST_TIMEOUT ?= 5s
 
-# renovate: datasource=docker depName=golangci/golangci-lint
-GOLANGCILINT_WANT_VERSION = v1.57.2
-GOLANGCILINT_IMAGE_SHA = sha256:8f3a60a00a83bb7d599d2e028ac0c3573dc2b9ec0842590f1c2e59781c821da7
-GOLANGCILINT_VERSION = $(shell golangci-lint version 2>/dev/null)
-
 # renovate: datasource=docker depName=library/golang
 GOLANG_IMAGE_VERSION = 1.22.2-alpine3.19
 GOLANG_IMAGE_SHA = sha256:cdc86d9f363e8786845bea2040312b4efa321b828acdeb26f393faa864d887b0
@@ -87,15 +82,7 @@ bench: TEST_TIMEOUT=30s
 bench:
 	$(GO_TEST) -bench=. $$($(GO) list ./...)
 
-ifneq (,$(findstring $(GOLANGCILINT_WANT_VERSION:v%=%),$(GOLANGCILINT_VERSION)))
-check:
-	golangci-lint run
-else
-check:
-	$(CONTAINER_ENGINE) run --rm -v `pwd`:/app -w /app docker.io/golangci/golangci-lint:$(GOLANGCILINT_WANT_VERSION)@$(GOLANGCILINT_IMAGE_SHA) golangci-lint run
-endif
-
 image:
 	$(CONTAINER_ENGINE) build $(DOCKER_FLAGS) -t $(IMAGE_REPOSITORY)$(if $(IMAGE_TAG),:$(IMAGE_TAG)) .
 
-.PHONY: all hubble release install clean test bench check image
+.PHONY: all hubble release install clean test bench image
