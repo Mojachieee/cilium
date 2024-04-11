@@ -375,6 +375,7 @@ Makefile* @cilium/build
 /examples/policies/kubernetes/clustermesh/ @cilium/sig-clustermesh
 /FURTHER_READINGS.rst @cilium/docs-structure
 /hack/ @cilium/tophat
+/hubble/ @cilium/sig-hubble
 /hubble-relay/ @cilium/sig-hubble
 /images @cilium/build
 /images/builder/install-protoc.sh @cilium/sig-hubble-api
