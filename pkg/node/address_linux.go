@@ -16,6 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/cilium/cilium/pkg/ip"
+	"github.com/cilium/cilium/pkg/logging/logfields"
 )
 
 func firstGlobalAddr(intf string, preferredIP net.IP, family int, preferPublic bool) (net.IP, error) {
@@ -201,11 +202,9 @@ func getCiliumHostIPsFromNetDev(devName string) (ipv4GW, ipv6Router net.IP) {
 
 // initMasqueradeAddrs initializes BPF masquerade addresses for the given
 // devices.
-func initMasqueradeAddrs(masqAddrs map[string]net.IP, family int, masqIPFromDevice string, devices []string, logfield string) error {
-	// ipEnv := os.Getenv("blah")
-
+func initMasqueradeAddrsV6(masqAddrs map[string]net.IP, family int, masqIPFromDevice string, devices []string, logfield string) error {
 	var prefIP net.IP
-
+	var found bool
 	interfaces, _ := net.Interfaces()
 	for _, iface := range interfaces {
 		log.Warn(fmt.Sprintf("iface is %+v", iface))
@@ -214,47 +213,54 @@ func initMasqueradeAddrs(masqAddrs map[string]net.IP, family int, masqIPFromDevi
 			for _, address := range addresses {
 				log.Warn(fmt.Sprintf("address is %+v", address))
 				if strings.HasSuffix(address.String(), "/128") {
-					if address.Network() != "tcp" {
-						panic("it's not tcp - oh no")
-					}
 					prefIP = net.ParseIP(strings.TrimSuffix(address.String(), "/128"))
+					found = true
 				}
 			}
 		}
 
 	}
-	log.WithFields(logrus.Fields{
-		// "env_ip":  ipEnv,
-		"pref_ip": prefIP,
-	}).Warn("attempting to set pref IP from env var")
+	if found {
+		log.WithFields(logrus.Fields{
+			// "env_ip":  ipEnv,
+			"pref_ip": prefIP,
+		}).Warn("attempting to set pref IP from env var")
 
-	for _, device := range devices {
-		masqAddrs[device] = prefIP
+		for _, device := range devices {
+			masqAddrs[device] = prefIP
+		}
+		return nil
+	} else {
+		log.Warn("did not find preferred IP to use - falling back")
+	}
+	return initMasqueradeAddrs(masqAddrs, family, masqIPFromDevice, devices, logfield)
+}
+
+func initMasqueradeAddrs(masqAddrs map[string]net.IP, family int, masqIPFromDevice string, devices []string, logfield string) error {
+
+	if ifaceName := masqIPFromDevice; ifaceName != "" {
+		ip, err := firstGlobalAddr(ifaceName, nil, family, preferPublicIP)
+		if err != nil {
+			return fmt.Errorf("Failed to determine IP of %s for BPF masq", ifaceName)
+		}
+		for _, device := range devices {
+			masqAddrs[device] = ip
+		}
+		return nil
 	}
 
-	// if ifaceName := masqIPFromDevice; ifaceName != "" {
-	// 	ip, err := firstGlobalAddr(ifaceName, prefIP, family, preferPublicIP)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Failed to determine IP of %s for BPF masq", ifaceName)
-	// 	}
-	// 	for _, device := range devices {
-	// 		masqAddrs[device] = ip
-	// 	}
-	// 	return nil
-	// }
+	for _, device := range devices {
+		ip, err := firstGlobalAddr(device, GetK8sNodeIP(), family, preferPublicIP)
+		if err != nil {
+			return fmt.Errorf("Failed to determine IP of %s for BPF masq", device)
+		}
 
-	// for _, device := range devices {
-	// 	ip, err := firstGlobalAddr(device, prefIP, family, preferPublicIP)
-	// 	if err != nil {
-	// 		return fmt.Errorf("Failed to determine IP of %s for BPF masq", device)
-	// 	}
-
-	// 	masqAddrs[device] = ip
-	// 	log.WithFields(logrus.Fields{
-	// 		logfield:         ip,
-	// 		logfields.Device: device,
-	// 	}).Info("Masquerading IP selected for device")
-	// }
+		masqAddrs[device] = ip
+		log.WithFields(logrus.Fields{
+			logfield:         ip,
+			logfields.Device: device,
+		}).Info("Masquerading IP selected for device")
+	}
 
 	return nil
 }
@@ -268,5 +274,5 @@ func initMasqueradeV4Addrs(masqAddrs map[string]net.IP, masqIPFromDevice string,
 // initMasqueradeV6Addrs initializes BPF masquerade IPv6 addresses for the
 // given devices.
 func initMasqueradeV6Addrs(masqAddrs map[string]net.IP, masqIPFromDevice string, devices []string, logfield string) error {
-	return initMasqueradeAddrs(masqAddrs, netlink.FAMILY_V6, masqIPFromDevice, devices, logfield)
+	return initMasqueradeAddrsV6(masqAddrs, netlink.FAMILY_V6, masqIPFromDevice, devices, logfield)
 }
